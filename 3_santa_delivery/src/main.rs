@@ -13,12 +13,21 @@ fn main() {
     io::stdin().read_to_string(&mut buffer).unwrap();
 
     let mut houses_visited = 1u64;
-    let mut current = Point { x: 0, y: 0 };
+    let mut current_santa = Point { x: 0, y: 0 };
+    let mut current_robo = Point { x: 0, y: 0 };
+    let mut robo_turn = false;
     let mut visited = HashSet::<Point>::new();
 
-    visited.insert(current);
+    visited.insert(current_santa);
 
     for c in buffer.trim().chars() {
+        let mut current : &mut Point = if robo_turn {
+            &mut current_robo
+        } else {
+            &mut current_santa
+        };
+        robo_turn = !robo_turn;
+
         match c {
             '>' => {
                 current.x += 1;
@@ -38,13 +47,13 @@ fn main() {
             }
         }
 
-        if visited.contains(& current) {
+        if visited.contains(&current) {
             continue;
         }
 
-        visited.insert(current);
+        visited.insert(*current);
         houses_visited += 1;
     }
 
-    println!("He visited {} houses", houses_visited);
+    println!("They visited {} houses", houses_visited);
 }
