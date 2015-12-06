@@ -13,7 +13,7 @@ fn parse_line(l : &str) -> (u64, u64, u64) {
     (w, h, l)
 }
 
-fn wrapping_paper_for(w : u64, h : u64, l : u64) -> u64 {
+fn two_smallest(w : u64, h : u64, l : u64) -> (u64, u64) {
     let smallest = min(w, min(h, l));
     let second_side =
         if smallest == w {
@@ -24,16 +24,30 @@ fn wrapping_paper_for(w : u64, h : u64, l : u64) -> u64 {
             min(w, h)
         };
 
+    (smallest, second_side)
+}
+
+fn wrapping_paper_for(w : u64, h : u64, l : u64) -> u64 {
+    let (smallest, second_side) = two_smallest(w, h, l);
     (2*l*w + 2*w*h + 2*h*l) + smallest * second_side
 }
 
+fn ribbon_for(w : u64, h : u64, l : u64) -> u64 {
+    let (smallest, second_side) = two_smallest(w, h, l);
+
+    (smallest * 2 + second_side * 2) + w * h * l
+}
+
 fn main() {
-    let mut total : u64 = 0;
+    let mut total_wrapping_paper = 0u64;
+    let mut total_ribbon = 0u64;
     let stdin = io::stdin();
     for line in stdin.lock().lines() {
         let (w, h, l) = parse_line(line.unwrap().trim());
-        total += wrapping_paper_for(w, h, l);
+        total_wrapping_paper += wrapping_paper_for(w, h, l);
+        total_ribbon += ribbon_for(w, h, l);
     }
 
-    println!("Total: {}", total);
+    println!("Total wrapping paper: {}", total_wrapping_paper);
+    println!("Total ribbon: {}", total_ribbon);
 }
