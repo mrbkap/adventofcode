@@ -1,6 +1,6 @@
 use std::io;
 use std::io::BufRead;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 struct Range {
     start_row : u32,
@@ -53,13 +53,13 @@ fn parse_line(line : &str) -> (Action, Range) {
     return (action, range);
 }
 
-fn iterate_range<F>(lights : &mut HashMap<u32, HashSet<u32>>, r : Range, f : F) where F: Fn(&mut HashSet<u32>, u32) {
+fn iterate_range<F>(lights : &mut HashMap<u32, HashMap<u32, u32>>, r : Range, f : F) where F: Fn(&mut HashMap<u32, u32>, u32) {
     for row in r.start_row..r.end_row {
         if !lights.contains_key(&row) {
-            lights.insert(row, HashSet::new());
+            lights.insert(row, HashMap::new());
         }
 
-        let mut row_lights : &mut HashSet<u32> = lights.get_mut(&row).unwrap();
+        let mut row_lights : &mut HashMap<u32, u32> = lights.get_mut(&row).unwrap();
         for col in r.start_col..r.end_col {
             f(row_lights, col);
         }
@@ -72,25 +72,38 @@ fn main() {
     let stdin = io::stdin();
     for line in stdin.lock().lines() {
         let (action, range) = parse_line(line.unwrap().trim());
-        iterate_range(&mut lights, range, |row_lights : &mut HashSet<u32>, col : u32| {
+        iterate_range(&mut lights, range, |row_lights : &mut HashMap<u32, u32>, col : u32| {
             match action {
-                Action::TurnOn => { row_lights.insert(col); }
-                Action::TurnOff => { row_lights.remove(&col); }
-                Action::Toggle => {
-                    if row_lights.contains(& col) {
-                        row_lights.remove(& col);
-                    } else {
-                        row_lights.insert(col);
+                Action::TurnOn | Action::Toggle => {
+                    let increase = match action {
+                        Action::TurnOn => { 1 }
+                        Action::Toggle => { 2 }
+                        _ => { panic!(); }
+                    };
+
+                    if !row_lights.contains_key(&col) {
+                        row_lights.insert(col, 0);
+                    }
+
+                    *row_lights.get_mut(&col).unwrap() += increase;
+                }
+                Action::TurnOff => {
+                    if let Some(brightness) = row_lights.get_mut(&col) {
+                        if *brightness > 0 {
+                            *brightness = *brightness - 1;
+                        }
                     }
                 }
             }
         });
     }
 
-    let mut num_lights = 0u32;
+    let mut brightness = 0u32;
     for (_, row_lights) in lights {
-        num_lights += row_lights.len() as u32;
+        for (_, light_bright) in row_lights {
+            brightness += light_bright;
+        }
     }
 
-    println!("There are {} lights" , num_lights);
+    println!("There is {} brightness" , brightness);
 }
