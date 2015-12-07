@@ -1,0 +1,4 @@
+[package]
+name = "5_nice_strings"
+version = "0.1.0"
+authors = ["Blake Kaplan <mrbkap@gmail.com>"]
