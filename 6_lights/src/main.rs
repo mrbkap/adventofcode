@@ -81,11 +81,8 @@ fn main() {
                         _ => { panic!(); }
                     };
 
-                    if !row_lights.contains_key(&col) {
-                        row_lights.insert(col, 0);
-                    }
-
-                    *row_lights.get_mut(&col).unwrap() += increase;
+                    let light = row_lights.entry(col).or_insert(0);
+                    *light += increase;
                 }
                 Action::TurnOff => {
                     if let Some(brightness) = row_lights.get_mut(&col) {
