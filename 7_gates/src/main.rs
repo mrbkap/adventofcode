@@ -16,105 +16,117 @@ enum MaybeResolved {
     Resolved(u32),
 }
 
-struct Gate {
-    name : String,
-    value : MaybeResolved,
+struct GateGame {
+    gates: HashMap<String, MaybeResolved>
 }
 
-fn parse_line(l : &str) -> Gate {
-    let v : Vec<&str> = l.split_whitespace().collect();
+impl <'a> GateGame {
+    pub fn new() -> GateGame {
+        return GateGame { gates: HashMap::new() };
+    }
 
-    match v[0].char_at(0) {
-        'N' => {
-            assert!(v.len() == 4);
-            return Gate { name: v[-1].to_string(), value: MaybeResolved::Value(Value::Not(v[1].to_string())) };
-        }
-        '0'...'9' => {
-            assert!(v.len() == 3);
-            return Gate { name: v[-1].to_string(), value: MaybeResolved::Resolved(v[0].parse::<u32>().unwrap()) };
-        }
-        _  => {
-            assert!(v.len() == 5);
-            let value = match v[1] {
-                "AND" => { Value::And(v[0].to_string(), v[2].to_string()) }
-                "OR" => { Value::Or(v[0].to_string(), v[2].to_string()) }
-                "LSHIFT" => { Value::Lshift(v[0].to_string(), v[2].parse::<u32>().unwrap()) }
-                "RSHIFT" => { Value::Rshift(v[0].to_string(), v[2].parse::<u32>().unwrap()) }
-                _ => { panic!(); }
-            };
+    pub fn handle_line(self: &'a mut GateGame, l: &str) {
+        let v : Vec<&str> = l.split_whitespace().collect();
 
-            return Gate { name: v[-1].to_string(), value: MaybeResolved::Value(value) };
+        match v[0].char_at(0) {
+            'N' => {
+                assert!(v.len() == 4);
+                self.gates.insert(v[-1].to_string(), MaybeResolved::Value(Value::Not(v[1].to_string())));
+            }
+            '0'...'9' => {
+                assert!(v.len() == 3);
+                self.gates.insert(v[-1].to_string(), MaybeResolved::Resolved(v[0].parse::<u32>().unwrap()));
+            }
+            _  => {
+                assert!(v.len() == 5);
+                let value = match v[1] {
+                    "AND" => { Value::And(v[0].to_string(), v[2].to_string()) }
+                    "OR" => { Value::Or(v[0].to_string(), v[2].to_string()) }
+                    "LSHIFT" => { Value::Lshift(v[0].to_string(), v[2].parse::<u32>().unwrap()) }
+                    "RSHIFT" => { Value::Rshift(v[0].to_string(), v[2].parse::<u32>().unwrap()) }
+                    _ => { panic!(); }
+                };
+
+                self.gates.insert(v[-1].to_string(), MaybeResolved::Value(value));
+            }
         }
+    }
+
+    pub fn resolve(self: &'a mut GateGame) {
+        let mut resolving = HashSet::new();
+        let keys = {
+            self.gates.keys().copy()
+        };
+        for key in keys {
+            self._resolve(&key, &mut resolving);
+        }
+    }
+
+    fn _resolve(self: &'a mut GateGame, gname: &str, resolving: &mut HashSet<String>) -> u32 {
+        if resolving.contains(gname) {
+            panic!("recursive lookup");
+        }
+
+        resolving.insert(gname.to_string());
+        let mut value = self.gates.entry(gname.to_string()).or_insert_with(|| { panic!() });
+
+        let result = match *value {
+            MaybeResolved::Resolved(r) => {
+                r
+            }
+            MaybeResolved::Value(Value::Not(ref s)) => {
+                let rhs = self._resolve(s, &mut resolving);
+                !rhs
+            }
+            MaybeResolved::Value(Value::And(ref lhs, ref rhs)) => {
+                let lhsv = self._resolve(lhs, &mut resolving);
+                let rhsv = self._resolve(rhs, &mut resolving);
+                lhsv & rhsv
+            }
+            MaybeResolved::Value(Value::Or(ref lhs, ref rhs)) => {
+                let lhsv = self._resolve(lhs, &mut resolving);
+                let rhsv = self._resolve(rhs, &mut resolving);
+                lhsv & rhsv
+            }
+            MaybeResolved::Value(Value::Lshift(ref lhs, howmuch)) => {
+                let lhsv = self._resolve(lhs, &mut resolving);
+                lhsv << howmuch
+            }
+            MaybeResolved::Value(Value::Rshift(ref lhs, howmuch)) => {
+                let lhsv = self._resolve(lhs, &mut resolving);
+                lhsv >> howmuch
+            }
+            MaybeResolved::Value(Value::Const(c)) => {
+                c
+            }
+        };
+
+        *value = MaybeResolved::Resolved(result);
+        resolving.remove(gname);
+
+        return result;
+    }
+
+    fn iter(self: &GateGame) -> std::collections::hash_map::Iter<String, MaybeResolved> {
+        return self.gates.iter();
     }
 }
 
+/*
 fn resolve<'a>(env: &'a mut HashMap<String, Gate>, resolving: &'a mut HashSet<String>, gate: &'a mut Gate) -> u32 {
-    if resolving.contains(&gate.name) {
-        panic!("recursive lookup");
-    }
-
-    resolving.insert(gate.name.to_string());
-
-    let result = match gate.value {
-        MaybeResolved::Resolved(r) => {
-            r
-        }
-        MaybeResolved::Value(Value::Not(ref s)) => {
-            let mut sgate : &mut Gate;
-            let rhs = resolve(env, resolving, &mut sgate);
-            !rhs
-        }
-        MaybeResolved::Value(Value::And(ref lhs, ref rhs)) => {
-            let lhsgate = env.get_mut(lhs).unwrap();
-            let rhsgate = env.get_mut(rhs).unwrap();
-            let lhsv = resolve(env, resolving, lhsgate);
-            let rhsv = resolve(env, resolving, rhsgate);
-            lhsv & rhsv
-        }
-        MaybeResolved::Value(Value::Or(ref lhs, ref rhs)) => {
-            let lhsgate = env.get_mut(lhs).unwrap();
-            let rhsgate = env.get_mut(rhs).unwrap();
-            let lhsv = resolve(env, resolving, lhsgate);
-            let rhsv = resolve(env, resolving, rhsgate);
-            lhsv & rhsv
-        }
-        MaybeResolved::Value(Value::Lshift(ref lhs, howmuch)) => {
-            let lhsgate = env.get_mut(lhs).unwrap();
-            let lhsv = resolve(env, resolving, lhsgate);
-            lhsv << howmuch
-        }
-        MaybeResolved::Value(Value::Rshift(ref lhs, howmuch)) => {
-            let lhsgate = env.get_mut(lhs).unwrap();
-            let lhsv = resolve(env, resolving, lhsgate);
-            lhsv >> howmuch
-        }
-        MaybeResolved::Value(Value::Const(c)) => {
-            c
-        }
-    };
-
-    gate.value = MaybeResolved::Resolved(result);
-    resolving.remove(&gate.name);
-
-    return result;
 }
+*/
 
 fn main() {
-    let mut env = HashMap::new();
+    let mut game = GateGame::new();
 
     let stdin = io::stdin();
     for line in stdin.lock().lines() {
-        let gate = parse_line(line.unwrap().trim());
-        env.insert(gate.name, gate);
+        game.handle_line(line.unwrap().trim());
     }
 
-    let mut resolving = HashSet::new();
-    for gate in env.values() {
-        resolve(&mut env, &mut resolving, &mut gate);
-    }
-
-    for (gatename, gate) in env.iter() {
-        if let MaybeResolved::Resolved(v) = gate.value {
+    for (gatename, value) in game.iter() {
+        if let MaybeResolved::Resolved(v) = *value {
             println!("{} is {}", gatename, v);
         }
         else {
