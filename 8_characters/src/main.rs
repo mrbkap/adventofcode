@@ -17,11 +17,8 @@ fn main() {
         while let Some(c) = iter.next() {
             unencoded += 1;
             match c {
-                '"' => {
+                '"' | '\\' => {
                     reencoded += 2; // \"
-                }
-                '\\' => {
-                    reencoded += 2; // \\
                 }
                 _ => { reencoded += 1 }
             }
