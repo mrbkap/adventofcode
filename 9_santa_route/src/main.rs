@@ -9,16 +9,15 @@ struct Instruction {
 }
 
 fn do_find_shortest(edges: &Vec<Vec<u32>>) -> u32 {
-    let mut best = u32::max_value();
+    let mut best = 0;
     let mut visited: Vec<usize> = Vec::new();
 
     for i in 0..edges.len() {
         visited.push(i);
         let maybe = find_shortest_path(edges, &mut visited, 0);
         visited.pop();
-        println!("maybe is {}", maybe);
 
-        if maybe < best {
+        if maybe > best {
             best = maybe;
         }
     }
@@ -31,7 +30,7 @@ fn find_shortest_path(edges: &Vec<Vec<u32>>, visited: &mut Vec<usize>, curr: u32
     }
 
     let last_idx = *visited.last().unwrap();
-    let mut best_so_far = u32::max_value();
+    let mut best_so_far = 0;
     for (idx, weight) in edges[last_idx].iter().enumerate() {
        if *weight == 0 || visited.iter().any(|idx2| idx == *idx2) {
            continue;
@@ -40,7 +39,7 @@ fn find_shortest_path(edges: &Vec<Vec<u32>>, visited: &mut Vec<usize>, curr: u32
        visited.push(idx);
        let better = find_shortest_path(edges, visited, *weight);
        visited.pop();
-       if better < best_so_far {
+       if better > best_so_far {
            best_so_far = better;
        }
     }
