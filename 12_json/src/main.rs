@@ -12,7 +12,18 @@ fn find_nums(data: &Json) -> i64 {
             return a.iter().fold(0i64, |acc, v| acc + find_nums(&v));
         }
         Json::Object(ref o) => {
-            return o.values().fold(0i64, |acc, v| acc + find_nums(&v));
+            let mut cnt = 0i64;
+            for v in o.values() {
+                if let Json::String(ref s) = *v {
+                    if s == "red" {
+                        return 0;
+                    }
+                }
+
+                cnt += find_nums(&v);
+            }
+
+            return cnt;
         }
         Json::String(_) | Json::Boolean(_) | Json::Null => { return 0; }
     }
