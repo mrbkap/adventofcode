@@ -46,9 +46,25 @@ fn main() {
         for (k, a) in &needle.attrs {
             match target.attrs.get(k) {
                 Some(targetval) => {
-                    if a != targetval {
-                        matched = false;
-                        break;
+                    match k.as_ref() {
+                        "cats" | "trees" => {
+                            if a < targetval {
+                                matched = false;
+                                break;
+                            }
+                        }
+                        "pomeranians" | "goldfish" => {
+                            if a >= targetval {
+                                matched = false;
+                                break;
+                            }
+                        }
+                        _ => {
+                            if a != targetval {
+                                matched = false;
+                                break;
+                            }
+                        }
                     }
                 }
                 None => {
