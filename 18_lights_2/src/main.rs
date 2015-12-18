@@ -20,6 +20,15 @@ fn step(buf: &Vec<Vec<bool>>, work_buf: &mut Vec<Vec<bool>>) {
             work_buf[r][c] = if buf[r][c] { match neighbors { 2|3 => true, _ => false } } else { neighbors == 3 };
         }
     }
+
+    stick_lights(work_buf);
+}
+
+fn stick_lights(buf: &mut Vec<Vec<bool>>) {
+    buf[1][1] = true;
+    buf[1][N] = true;
+    buf[N][1] = true;
+    buf[N][N] = true;
 }
 
 fn main() {
@@ -42,6 +51,8 @@ fn main() {
             _ => { panic!("unexpected character"); }
         }
     }
+
+    stick_lights(cur_buf);
 
     for _ in 0..100 {
         step(cur_buf, other_buf);
