@@ -34,6 +34,50 @@ fn play_game(mut me: Player, mut boss: Player, items: &[&Item]) -> bool {
     }
 }
 
+fn first_star(me: &Player, boss: &Player, avail_weapon: &[Item], avail_armor: &[Item], avail_ring: &[Item]) {
+    let mut min = u32::max_value();
+    for w in avail_weapon.iter() {
+        for a in avail_armor.iter() {
+            for r in avail_ring.iter() {
+                for r2 in avail_ring.iter() {
+                    if r.cost > 0 && r2.cost > 0 && r.cost == r2.cost {
+                        continue;
+                    }
+                    let cost = w.cost + a.cost + r.cost + r2.cost;
+                    let won = play_game(*me, *boss, &[w, a, r, r2]);
+                    if won && cost < min {
+                        min = cost
+                    }
+                }
+            }
+        }
+    }
+
+    println!("{}", min);
+}
+
+fn second_star(me: &Player, boss: &Player, avail_weapon: &[Item], avail_armor: &[Item], avail_ring: &[Item]) {
+    let mut max = 0;
+    for w in avail_weapon.iter() {
+        for a in avail_armor.iter() {
+            for r in avail_ring.iter() {
+                for r2 in avail_ring.iter() {
+                    if r.cost > 0 && r2.cost > 0 && r.cost == r2.cost {
+                        continue;
+                    }
+                    let cost = w.cost + a.cost + r.cost + r2.cost;
+                    let won = play_game(*me, *boss, &[w, a, r, r2]);
+                    if !won && cost > max {
+                        max = cost
+                    }
+                }
+            }
+        }
+    }
+
+    println!("{}", max);
+}
+
 fn main() {
     let me = Player { health: 100, attack: 0, armor: 0 };
     let boss = Player { health: 100, attack: 8, armor: 2 };
@@ -63,23 +107,6 @@ fn main() {
         Item { cost: 80, armor: 0, attack: 3 },
     ];
 
-    let mut min = u32::max_value();
-    for w in avail_weapon.iter() {
-        for a in avail_armor.iter() {
-            for r in avail_ring.iter() {
-                for r2 in avail_ring.iter() {
-                    let cost = w.cost + a.cost + r.cost + r2.cost;
-                    let won = play_game(me, boss, &[w, a, r, r2]);
-                    if won && cost < min {
-                        if cost == 71 {
-                            println!("{:?} {:?} {:?} {:?}", w, a, r, r2);
-                        }
-                        min = cost
-                    }
-                }
-            }
-        }
-    }
-
-    println!("{}", min);
+    first_star(&me, &boss, &avail_weapon, &avail_armor, &avail_ring);
+    second_star(&me, &boss, &avail_weapon, &avail_armor, &avail_ring);
 }
