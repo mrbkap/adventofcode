@@ -1,25 +1,20 @@
-fn presents_for(h: u32) -> u32 {
-    let mut ps = 0u32;
-    let target = ((h as f64).sqrt() as u32) + 1;
-    for i in 1..(target + 1) {
-        if h % i == 0 {
-            ps += i;
-            ps += h / i;
+fn presents_for(minimum_presents: usize) -> usize {
+    let div = minimum_presents / 11;
+    let mut houses = vec![0; div];
+
+    for elve in 1..div {
+        let mut house_id = elve;
+        let mut i = 0;
+        while house_id < div && i < 50 {
+            houses[house_id] += elve;
+            house_id += elve;
+            i += 1;
         }
     }
 
-    return ps * 10;
+    houses.into_iter().position(|p| p >= div).unwrap()
 }
 
 fn main() {
-    let mut h = 1;
-    loop {
-        let ps = presents_for(h);
-        println!("House {} received {} presents", h, ps);
-        if ps >= 36000000 {
-            println!("House {} received {} presents", h, ps);
-            break;
-        }
-        h += 1;
-    }
+    println!("{}", presents_for(36000000));
 }
