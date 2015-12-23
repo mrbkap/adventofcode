@@ -1,0 +1,6 @@
+[package]
+name = "21_rpg_game_spells"
+version = "0.1.0"
+authors = ["Blake Kaplan <mrbkap@gmail.com>"]
+
+[dependencies]
