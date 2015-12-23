@@ -1,5 +1,5 @@
 #include <iostream>
-#include <map>
+#include <unordered_map>
 #include <set>
 #include <string>
 #include <sstream>
@@ -10,15 +10,34 @@ class GateGame;
 
 struct Value {
     enum ValueType { STR, CONST };
-    Value() : cons(0) { }
-    Value(Value&& v) : cons(v.cons), str(move(v.str)), type(v.type) {}
-    uint16_t cons;
-    string str;
+    Value(Value&& v) : type(v.type) {
+        if (type == STR) {
+            new (&str) string(move(v.str));
+        } else {
+            cons = v.cons;
+        }
+    }
+    ~Value() {
+        if (type == STR) {
+            str.~string();
+        }
+    }
+
+    union {
+        uint16_t cons;
+        string str;
+    };
     ValueType type;
+
+    static Value MaybeName(istream& istr);
+
+private:
+    Value() : cons(0) { }
 };
 
+// static
 Value
-MaybeName(istream& istr)
+Value::MaybeName(istream& istr)
 {
     Value v;
     if (istr >> v.cons) {
@@ -28,6 +47,7 @@ MaybeName(istream& istr)
 
     istr.clear();
     v.type = Value::STR;
+    new (&v.str) string();
     istr >> v.str;
     return v;
 }
@@ -45,10 +65,7 @@ struct Gate
 class GateGame
 {
 public:
-    ~GateGame() {
-        for (auto i = mEnv.begin(); i != mEnv.end(); ++i)
-            delete i->second;
-    }
+    ~GateGame() { }
     uint16_t Resolve(const string& name, set<string>& resolving);
     void ParseLine(const string& line);
     void Run();
@@ -56,7 +73,7 @@ public:
     void Print();
 
 private:
-    typedef map<string, Gate*> Environment;
+    typedef unordered_map<string, unique_ptr<Gate>> Environment;
     Environment mEnv;
 };
 
@@ -89,7 +106,7 @@ struct Not : Gate
 
 struct MoveFrom : Gate
 {
-    MoveFrom(const Value& v) : mRhs(v) { }
+    MoveFrom(Value&& v) : mRhs(move(v)) { }
     virtual ~MoveFrom() { }
 
     virtual uint16_t Resolve(GateGame& env, set<string>& resolving) {
@@ -103,8 +120,8 @@ struct MoveFrom : Gate
 
 struct AndOr : Gate
 {
-    AndOr(const Value& lhs, const Value& rhs, bool isAnd)
-        : mLhs(lhs), mRhs(rhs), mIsAnd(isAnd)
+    AndOr(Value&& lhs, Value&& rhs, bool isAnd)
+        : mLhs(move(lhs)), mRhs(move(rhs)), mIsAnd(isAnd)
     { }
 
     virtual uint16_t Resolve(GateGame& env, set<string>& resolving) {
@@ -121,8 +138,8 @@ struct AndOr : Gate
 
 struct Shift : Gate
 {
-    Shift(Value& lhs, uint16_t howmuch, bool left)
-        : mLhs(lhs), mHowmuch(howmuch), mLeft(left)
+    Shift(Value&& lhs, uint16_t howmuch, bool left)
+        : mLhs(move(lhs)), mHowmuch(howmuch), mLeft(left)
     { assert(mHowmuch); }
 
     virtual uint16_t Resolve(GateGame& env, set<string>& resolving) {
@@ -156,8 +173,7 @@ GateGame::Resolve(const string& name, set<string>& resolving)
     resolving.insert(name);
 
     uint16_t value = gate->second->Resolve(*this, resolving);
-    delete gate->second;
-    mEnv[name] = new Constant(value);
+    mEnv[name].reset(new Constant(value));
 
     resolving.erase(name);
     return value;
@@ -166,7 +182,7 @@ GateGame::Resolve(const string& name, set<string>& resolving)
 void
 GateGame::ParseLine(const string& line)
 {
-    istringstream istr(line);
+    istringstream istr { line };
 
     if (line[0] == 'N') {
         // NOT
@@ -177,51 +193,51 @@ GateGame::ParseLine(const string& line)
         string target;
         istr >> target; // ->
         istr >> target;
-        mEnv[target] = new Not(rhs);
+        mEnv[target].reset(new Not(rhs));
         return;
     }
 
-    Value lhs = MaybeName(istr);
+    Value lhs { Value::MaybeName(istr) };
 
     string op;
     istr >> op;
     if (op == "->") {
         string target;
         istr >> target;
-        mEnv[target] = new MoveFrom(lhs);
+        mEnv[target].reset(new MoveFrom(move(lhs)));
         return;
     }
 
-    Value rhs = MaybeName(istr);
-    Gate* g;
+    Value rhs { Value::MaybeName(istr) };
+    unique_ptr<Gate> g;
     if (op == "AND" || op == "OR") {
-        g = new AndOr(lhs, rhs, op == "AND");
+        g.reset(new AndOr(move(lhs), move(rhs), op == "AND"));
     } else {
         assert(rhs.type == Value::CONST);
-        g = new Shift(lhs, rhs.cons, op == "LSHIFT");
+        g.reset(new Shift(move(lhs), rhs.cons, op == "LSHIFT"));
     }
 
     string target;
     istr >> target; // ->
     istr >> target;
-    mEnv[target] = g;
+    mEnv[target] = move(g);
 }
 
 void
 GateGame::Run()
 {
     set<string> resolving;
-    for (auto i = mEnv.begin(); i != mEnv.end(); ++i) {
-        Resolve(i->first, resolving);
+    for (auto& i : mEnv) {
+        Resolve(i.first, resolving);
     }
 }
 
 void
 GateGame::Print()
 {
-    for (auto i = mEnv.begin(); i != mEnv.end(); ++i) {
-        assert(i->second->isConstant());
-        cout << i->first << " " << static_cast<Constant*>(i->second)->mValue << '\n';
+    for (auto& i : mEnv) {
+        assert(i.second->isConstant());
+        cout << i.first << " " << static_cast<Constant*>(i.second.get())->mValue << '\n';
     }
 }
 
@@ -236,8 +252,8 @@ main()
     }
 
     g.Run();
-    /*set<string> resolving;
-    cout << g.Resolve("A", resolving) << "\n";*/
     g.Print();
+    set<string> resolving;
+    cout << g.Resolve("a", resolving) << "\n";
     return 0;
 }
