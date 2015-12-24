@@ -1,0 +1,6 @@
+[package]
+name = "24_sleigh_packing"
+version = "0.1.0"
+authors = ["Blake Kaplan <mrbkap@gmail.com>"]
+
+[dependencies]
