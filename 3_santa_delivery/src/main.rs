@@ -12,7 +12,6 @@ fn main() {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer).unwrap();
 
-    let mut houses_visited = 1u64;
     let mut current_santa = Point { x: 0, y: 0 };
     let mut current_robo = Point { x: 0, y: 0 };
     let mut robo_turn = false;
@@ -47,13 +46,8 @@ fn main() {
             }
         }
 
-        if visited.contains(&current) {
-            continue;
-        }
-
         visited.insert(*current);
-        houses_visited += 1;
     }
 
-    println!("They visited {} houses", houses_visited);
+    println!("They visited {} houses", visited.len());
 }
