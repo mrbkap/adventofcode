@@ -14,8 +14,8 @@ fn main() {
     let mut x = 0u64;
 
     loop {
-        let attempt = String::new() + &buffer + &x.to_string();
-        generator.input_str(&*attempt);
+        generator.input_str(&buffer);
+        generator.input_str(&x.to_string());
 
         let result = generator.result_str();
         if result.starts_with("000000") {

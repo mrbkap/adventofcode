@@ -21,15 +21,19 @@ fn register(r: &str) -> Register {
     }
 }
 
+fn imm(word: &str) -> i32 {
+    word.parse::<i32>().unwrap()
+}
+
 fn parse_line(line: &str) -> Instr {
     let split: Vec<_> = line.split_whitespace().collect();
     match split[0] {
         "hlf" => { Instr::Hlf(register(split[1])) }
         "tpl" => { Instr::Tpl(register(split[1])) }
         "inc" => { Instr::Inc(register(split[1])) }
-        "jmp" => { Instr::Jmp(split[1].parse::<i32>().unwrap()) }
-        "jie" => { Instr::Jie(register(split[1].trim_right_matches(",")), split[2].parse::<i32>().unwrap()) }
-        "jio" => { Instr::Jio(register(split[1].trim_right_matches(",")), split[2].parse::<i32>().unwrap()) }
+        "jmp" => { Instr::Jmp(imm(split[1])) }
+        "jie" => { Instr::Jie(register(split[1].trim_right_matches(",")), imm(split[2])) }
+        "jio" => { Instr::Jio(register(split[1].trim_right_matches(",")), imm(split[2])) }
         _ => { panic!(); }
     }
 }
